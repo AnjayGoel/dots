@@ -13,17 +13,17 @@ import android.view.*
 import android.widget.TextView
 
 class PlayActivity : Activity() {
-    var con: Context? = null
-    private var gameCanvas: myCanvas? = null
-    var dimensions = Point()
+    private var con: Context? = null
+    private var gameCanvas: MyCanvas? = null
+    private var dimensions = Point()
     override fun onCreate(savedInstanceState: Bundle?) {
         con = this
         windowManager.defaultDisplay.getSize(dimensions)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_play)
-        gameCanvas = findViewById<View>(R.id.gameCanvas) as myCanvas
+        gameCanvas = findViewById<View>(R.id.gameCanvas) as MyCanvas
         info = findViewById<View>(R.id.info) as TextView
-        gameCanvas!!.set_no_of_players(intent.getIntExtra("no_of_players", 4))
+        gameCanvas!!.setNoOfPlayers(intent.getIntExtra("no_of_players", 4))
         val s = intent.getIntExtra("no_of_players", 4).toString() + ""
         info!!.text = s
         gameCanvas!!.setOnTouchListener { v, event ->
@@ -45,32 +45,33 @@ class PlayActivity : Activity() {
     }
 }
 
-private class myCanvas(c: Context?, attrs: AttributeSet?) : SurfaceView(c, attrs) {
+private class MyCanvas(c: Context?, attrs: AttributeSet?) : SurfaceView(c, attrs) {
     var surfaceHolder: SurfaceHolder
     var time: Long = 0
-    var myPaint: Paint
-    var dots_per_col = 7
-    var total_no_of_dots = dots_per_col * dots_per_col
+    var myPaint: Paint = Paint()
+    var dotsPerCol = 7
+    var totalNoOfDots = dotsPerCol * dotsPerCol
     var dots: Array<Dot?>
     var lines: Array<Line?>
     var squares: Array<Square?>
-    var dot_radius = 0
-    var focused_dot = 0
-    var dot_prev_color = Color.GRAY
-    var stroke_width = dot_radius / 2.toFloat()
+    var dotRadius = 0
+    var focusedDot = 0
+    var dotPrevColor = Color.GRAY
+    var strokeWidth = dotRadius / 2.toFloat()
     private lateinit var players: Array<Player?>
-    var no_of_players = 0
-    var current_player = 0
-    fun toggle_player() {
-        if (current_player == no_of_players - 1) current_player = 0 else current_player++
+    var totalPlayers = 0
+    var currentPlayer = 0
+    fun togglePlayer() {
+        currentPlayer = (currentPlayer + 1) % totalPlayers
     }
 
 
     override fun performClick(): Boolean {
         return true
     }
-    fun set_no_of_players(n: Int) {
-        no_of_players = n
+
+    fun setNoOfPlayers(n: Int) {
+        totalPlayers = n
         val arr = intArrayOf(Color.RED, Color.BLUE, Color.GREEN, Color.YELLOW)
         players = arrayOfNulls(n)
         for (i in 0 until n) {
@@ -82,16 +83,16 @@ private class myCanvas(c: Context?, attrs: AttributeSet?) : SurfaceView(c, attrs
         val x = width
         val y = height
         val uY = (y - x) / 2
-        val Margin = width / (dots_per_col + 2)
-        dot_radius = Margin / 4
-        stroke_width = Margin / 6.toFloat()
+        val Margin = width / (dotsPerCol + 2)
+        dotRadius = Margin / 4
+        strokeWidth = Margin / 6.toFloat()
         var j = uY + Margin
         var col = 0
-        while (col < dots_per_col) {
+        while (col < dotsPerCol) {
             var i = 3 * Margin / 2
             var row = 0
-            while (row < dots_per_col) {
-                dots[col * dots_per_col + row] = Dot(i, j, col * dots_per_col + row)
+            while (row < dotsPerCol) {
+                dots[col * dotsPerCol + row] = Dot(i, j, col * dotsPerCol + row)
                 i += Margin
                 row++
             }
@@ -101,8 +102,8 @@ private class myCanvas(c: Context?, attrs: AttributeSet?) : SurfaceView(c, attrs
         Draw(canvas)
     }
 
-    fun check_if_adjacent(fixed_dot: Int, d_to_check: Int): Boolean {
-        val adjacent = intArrayOf(fixed_dot - 1, fixed_dot + 1, fixed_dot + dots_per_col, fixed_dot - dots_per_col)
+    fun checkIfAdjacent(fixed_dot: Int, d_to_check: Int): Boolean {
+        val adjacent = intArrayOf(fixed_dot - 1, fixed_dot + 1, fixed_dot + dotsPerCol, fixed_dot - dotsPerCol)
         for (i in 0..3) {
             if (d_to_check == adjacent[i]) {
                 return true
@@ -114,46 +115,46 @@ private class myCanvas(c: Context?, attrs: AttributeSet?) : SurfaceView(c, attrs
     fun up(x: Int, y: Int) {
         var info = ""
         time = System.currentTimeMillis()
-        if (focused_dot == -1) return
-        val nearest_d = get_nearest(x, y)
+        if (focusedDot == -1) return
+        val nearest_d = getNearest(x, y)
         val c = surfaceHolder.lockCanvas()
-        if (nearest_d == -1 || nearest_d == focused_dot || !check_if_adjacent(focused_dot, nearest_d) || check_connected(focused_dot, nearest_d)) {
-            dots[focused_dot]!!.color = dot_prev_color
+        if (nearest_d == -1 || nearest_d == focusedDot || !checkIfAdjacent(focusedDot, nearest_d) || checkConnected(focusedDot, nearest_d)) {
+            dots[focusedDot]!!.color = dotPrevColor
             Draw(c)
             surfaceHolder.unlockCanvasAndPost(c)
             return
         } else {
-            dots[focused_dot]!!.color = players[current_player]!!.color
-            dots[nearest_d]!!.color = dots[focused_dot]!!.color
-            lines[Line.counter + 1] = Line(dots[nearest_d]!!.x, dots[nearest_d]!!.y, dots[focused_dot]!!.x, dots[focused_dot]!!.y, players[current_player]!!.color)
-            val arr = check_if_forms_square(focused_dot, nearest_d)
+            dots[focusedDot]!!.color = players[currentPlayer]!!.color
+            dots[nearest_d]!!.color = dots[focusedDot]!!.color
+            lines[Line.counter + 1] = Line(dots[nearest_d]!!.x, dots[nearest_d]!!.y, dots[focusedDot]!!.x, dots[focusedDot]!!.y, players[currentPlayer]!!.color)
+            val arr = checkIfFormsSquare(focusedDot, nearest_d)
             if (arr[0] != 0) {
-                players[current_player]!!.points += arr[0]
-                squares[Square.counter + 1] = Square(dots[focused_dot]!!.x, dots[focused_dot]!!.y, arr[1], arr[2], players[current_player]!!.color)
-                if (arr[0] == 2) squares[Square.counter + 1] = Square(dots[focused_dot]!!.x, dots[focused_dot]!!.y, arr[3], arr[4], players[current_player]!!.color)
-                if (Square.counter + 1 == (dots_per_col - 1) * (dots_per_col - 1)) {
+                players[currentPlayer]!!.points += arr[0]
+                squares[Square.counter + 1] = Square(dots[focusedDot]!!.x, dots[focusedDot]!!.y, arr[1], arr[2], players[currentPlayer]!!.color)
+                if (arr[0] == 2) squares[Square.counter + 1] = Square(dots[focusedDot]!!.x, dots[focusedDot]!!.y, arr[3], arr[4], players[currentPlayer]!!.color)
+                if (Square.counter + 1 == (dotsPerCol - 1) * (dotsPerCol - 1)) {
                     info += " Grid Complete"
-                    PlayActivity.info!!.text = "Player " + get_highest_scorer() + " wins"
+                    PlayActivity.info!!.text = "Player " + getHighestScorer() + " wins"
                 }
             }
-            connect(focused_dot, nearest_d)
-            toggle_player()
+            connect(focusedDot, nearest_d)
+            togglePlayer()
         }
         Draw(c)
         surfaceHolder.unlockCanvasAndPost(c)
         Log.d("abz", "Current frame rendering time in up is " + (System.currentTimeMillis() - time) + info)
     }
 
-    fun get_highest_scorer(): Int {
-        var highest_scorer = 0
-        var highest_score = players[0]!!.points
-        for (i in 0 until no_of_players) {
-            if (players[i]!!.points > highest_score) {
-                highest_score = players[i]!!.points
-                highest_scorer = i
+    fun getHighestScorer(): Int {
+        var highestScorer = 0
+        var highestScore = players[0]!!.points
+        for (i in 0 until totalPlayers) {
+            if (players[i]!!.points > highestScore) {
+                highestScore = players[i]!!.points
+                highestScorer = i
             }
         }
-        return highest_scorer
+        return highestScorer
     }
 
     fun Draw(c: Canvas) {
@@ -168,21 +169,21 @@ private class myCanvas(c: Context?, attrs: AttributeSet?) : SurfaceView(c, attrs
         }
         for (i in 0..Line.counter) {
             myPaint.color = lines[i]!!.color
-            myPaint.strokeWidth = stroke_width
+            myPaint.strokeWidth = strokeWidth
             c.drawLine(lines[i]!!.x1.toFloat(), lines[i]!!.y1.toFloat(), lines[i]!!.x2.toFloat(), lines[i]!!.y2.toFloat(), myPaint)
         }
-        for (curr_dot in 0 until total_no_of_dots) {
+        for (curr_dot in 0 until totalNoOfDots) {
             myPaint.color = dots[curr_dot]!!.color
-            c.drawCircle(dots[curr_dot]!!.x.toFloat(), dots[curr_dot]!!.y.toFloat(), dot_radius.toFloat(), myPaint)
+            c.drawCircle(dots[curr_dot]!!.x.toFloat(), dots[curr_dot]!!.y.toFloat(), dotRadius.toFloat(), myPaint)
         }
     }
 
-    fun check_if_forms_square(first: Int, second: Int): IntArray {
+    fun checkIfFormsSquare(first: Int, second: Int): IntArray {
         var arr = IntArray(5)
         arr[0] = 0
-        for (i in dots[first]!!.get_connected_dots()) {
-            for (j in dots[i]!!.get_connected_dots()) {
-                for (k in dots[j]!!.get_connected_dots()) {
+        for (i in dots[first]!!.getConnectedDots()) {
+            for (j in dots[i]!!.getConnectedDots()) {
+                for (k in dots[j]!!.getConnectedDots()) {
                     if (k == second) {
                         if (arr[0] != 0) {
                             arr[0] = 2
@@ -200,73 +201,72 @@ private class myCanvas(c: Context?, attrs: AttributeSet?) : SurfaceView(c, attrs
 
     fun down(x: Int, y: Int) {
         time = System.currentTimeMillis()
-        focused_dot = get_nearest(x, y)
-        if (focused_dot == -1) return
-        dot_prev_color = dots[focused_dot]!!.color
-        dots[focused_dot]!!.color = players[current_player]!!.color
+        focusedDot = getNearest(x, y)
+        if (focusedDot == -1) return
+        dotPrevColor = dots[focusedDot]!!.color
+        dots[focusedDot]!!.color = players[currentPlayer]!!.color
         val c = surfaceHolder.lockCanvas(null)
         Draw(c)
         surfaceHolder.unlockCanvasAndPost(c)
         Log.d("abz", "Current frame rendering time is " + (System.currentTimeMillis() - time))
     }
 
-    fun get_nearest(x: Int, y: Int): Int {
-        var least_x_distance = Math.abs(x - dots[0]!!.x)
-        var least_x = 0
-        for (i in 0 until dots_per_col) {
-            if (Math.abs(x - dots[i]!!.x) < least_x_distance) {
-                least_x_distance = Math.abs(x - dots[i]!!.x)
-                least_x = i
+    fun getNearest(x: Int, y: Int): Int {
+        var leastXDistance = Math.abs(x - dots[0]!!.x)
+        var leastX = 0
+        for (i in 0 until dotsPerCol) {
+            if (Math.abs(x - dots[i]!!.x) < leastXDistance) {
+                leastXDistance = Math.abs(x - dots[i]!!.x)
+                leastX = i
             }
         }
-        var nearest_dot = least_x
-        var least_y_distance = Math.abs(y - dots[nearest_dot]!!.y)
-        var i = nearest_dot
-        while (i < total_no_of_dots) {
-            if (Math.abs(y - dots[i]!!.y) < least_y_distance) {
-                least_y_distance = Math.abs(y - dots[i]!!.y)
-                nearest_dot = i
+        var nearestDot = leastX
+        var leastYDistance = Math.abs(y - dots[nearestDot]!!.y)
+        var i = nearestDot
+        while (i < totalNoOfDots) {
+            if (Math.abs(y - dots[i]!!.y) < leastYDistance) {
+                leastYDistance = Math.abs(y - dots[i]!!.y)
+                nearestDot = i
             }
-            i += dots_per_col
+            i += dotsPerCol
         }
-        if (Math.abs(x - dots[nearest_dot]!!.x) > 60 || Math.abs(y - dots[nearest_dot]!!.y) > 60) nearest_dot = -1
-        return nearest_dot
+        if (Math.abs(x - dots[nearestDot]!!.x) > 60 || Math.abs(y - dots[nearestDot]!!.y) > 60) nearestDot = -1
+        return nearestDot
     }
 
     fun stretch(x: Int, y: Int) {
         time = System.currentTimeMillis()
-        if (focused_dot == -1) return
+        if (focusedDot == -1) return
         val c = surfaceHolder.lockCanvas(null)
         Draw(c)
-        myPaint.strokeWidth = stroke_width
-        myPaint.color = players[current_player]!!.color
-        c.drawLine(dots[focused_dot]!!.x.toFloat(), dots[focused_dot]!!.y.toFloat(), x.toFloat(), y.toFloat(), myPaint)
-        c.drawCircle(dots[focused_dot]!!.x.toFloat(), dots[focused_dot]!!.y.toFloat(), stroke_width / 2, myPaint)
-        c.drawCircle(x.toFloat(), y.toFloat(), stroke_width / 2, myPaint)
+        myPaint.strokeWidth = strokeWidth
+        myPaint.color = players[currentPlayer]!!.color
+        c.drawLine(dots[focusedDot]!!.x.toFloat(), dots[focusedDot]!!.y.toFloat(), x.toFloat(), y.toFloat(), myPaint)
+        c.drawCircle(dots[focusedDot]!!.x.toFloat(), dots[focusedDot]!!.y.toFloat(), strokeWidth / 2, myPaint)
+        c.drawCircle(x.toFloat(), y.toFloat(), strokeWidth / 2, myPaint)
         surfaceHolder.unlockCanvasAndPost(c)
         Log.d("abz", "Current frame rendering time in stretch is " + (System.currentTimeMillis() - time))
     }
 
     fun connect(f: Int, s: Int) {
-        dots[f]!!.add_connected(s)
-        dots[s]!!.add_connected(f)
+        dots[f]!!.addConnected(s)
+        dots[s]!!.addConnected(f)
     }
 
-    fun check_connected(first: Int, second: Int): Boolean {
+    fun checkConnected(first: Int, second: Int): Boolean {
         if (dots[first]!!.counter == -1) return false
         for (i in 0..dots[first]!!.counter) {
-            if (dots[first]!!.adjacent_dots[i] == second) return true
+            if (dots[first]!!.adjacentDots[i] == second) return true
         }
         return false
     }
 
     init {
-        myPaint = Paint()
         myPaint.color = Color.GRAY
-        surfaceHolder = getHolder()
-        dots = arrayOfNulls(total_no_of_dots)
-        lines = arrayOfNulls(2 * (dots_per_col * (dots_per_col - 1)))
-        squares = arrayOfNulls(total_no_of_dots)
+        surfaceHolder = holder
+        dots = arrayOfNulls(totalNoOfDots)
+        lines = arrayOfNulls(2 * (dotsPerCol * (dotsPerCol - 1)))
+        squares = arrayOfNulls(totalNoOfDots)
         surfaceHolder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
                 val c = holder.lockCanvas(null)
@@ -309,31 +309,31 @@ internal class Square(var x1: Int, var y1: Int, var x2: Int, var y2: Int, color:
 internal class Dot(x: Int, y: Int, pos: Int) {
     var x: Int
     var y: Int
-    protected var self_pos: Int
+    protected var selfPos: Int
     var color: Int
     var counter = -1
-    var adjacent_dots = IntArray(4)
-    fun add_connected(d: Int) {
+    var adjacentDots = IntArray(4)
+    fun addConnected(d: Int) {
         if (counter == 3) return
         for (i in 0..counter) {
-            if (d == adjacent_dots[i]) return
+            if (d == adjacentDots[i]) return
         }
         counter++
-        adjacent_dots[counter] = d
+        adjacentDots[counter] = d
     }
 
-    fun get_connected_dots(): IntArray {
+    fun getConnectedDots(): IntArray {
         if (counter == -1) {
-            return intArrayOf(self_pos)
+            return intArrayOf(selfPos)
         }
         val coors = IntArray(counter + 1)
-        System.arraycopy(adjacent_dots, 0, coors, 0, counter + 1)
+        System.arraycopy(adjacentDots, 0, coors, 0, counter + 1)
         return coors
     }
 
     init {
-        adjacent_dots[0] = -1
-        self_pos = pos
+        adjacentDots[0] = -1
+        selfPos = pos
         color = Color.GRAY
         this.x = x
         this.y = y
@@ -344,10 +344,10 @@ internal class Player(var color: Int) {
     var points = 0f
 
     companion object {
-        var total_players = 0
+        var totalPlayers = 0
     }
 
     init {
-        total_players++
+        totalPlayers++
     }
 }
