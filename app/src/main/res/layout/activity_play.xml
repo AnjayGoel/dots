@@ -9,19 +9,20 @@
     android:orientation="vertical"
     android:background="#e0e0e0">
 
-    <com.anjay.dots.MyCanvas
+    <com.anjay.dots.Game
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:id="@+id/gameCanvas"
-        android:layout_weight=".9" />
+        android:id="@+id/game"
+        android:layout_weight=".95" />
 
     <TextView
+        android:id="@+id/info"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:text="info"
-        android:id="@+id/info"
         android:layout_gravity="center_horizontal"
-        android:layout_weight=".1"
+        android:layout_weight=".05"
+        android:text="info"
+        android:textColor="#000000"
         android:textAlignment="center"
         android:textSize="15sp" />
 </LinearLayout>

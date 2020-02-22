@@ -2,4 +2,5 @@
     <string name="app_name">Dots</string>
     <string name="title_activity_welcome">Dots</string>
     <string name="play">Play</string>
+    <string name="title_activity_finish">Finish</string>
 </resources>

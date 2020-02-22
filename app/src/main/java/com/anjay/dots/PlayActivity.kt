@@ -2,6 +2,7 @@ package com.anjay.dots
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -14,53 +15,68 @@ import android.widget.TextView
 
 class PlayActivity : Activity() {
     private var con: Context? = null
-    private var gameCanvas: MyCanvas? = null
+    private var game: Game? = null
     private var dimensions = Point()
     override fun onCreate(savedInstanceState: Bundle?) {
         con = this
         windowManager.defaultDisplay.getSize(dimensions)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_play)
-        gameCanvas = findViewById<View>(R.id.gameCanvas) as MyCanvas
-        info = findViewById<View>(R.id.info) as TextView
-        gameCanvas!!.setNoOfPlayers(intent.getIntExtra("no_of_players", 4))
-        val s = intent.getIntExtra("no_of_players", 4).toString() + ""
-        info!!.text = s
-        gameCanvas!!.setOnTouchListener { v, event ->
+        game = findViewById<View>(R.id.game) as Game
+        game!!.dotsPerCol = (intent.getIntExtra("gridSize", 5))
+        game!!.setNoOfPlayers(intent.getIntExtra("noOfPlayers", 4))
+        game!!.playActivity = this
+        game!!.setOnTouchListener { v, event ->
             when (event.action) {
-                MotionEvent.ACTION_MOVE -> gameCanvas!!.stretch(event.x.toInt(), event.y.toInt())
-                MotionEvent.ACTION_DOWN -> gameCanvas!!.down(event.x.toInt(), event.y.toInt())
-                MotionEvent.ACTION_UP -> gameCanvas!!.up(event.x.toInt(), event.y.toInt())
+                MotionEvent.ACTION_MOVE -> game!!.stretch(event.x.toInt(), event.y.toInt())
+                MotionEvent.ACTION_DOWN -> game!!.down(event.x.toInt(), event.y.toInt())
+                MotionEvent.ACTION_UP -> game!!.up(event.x.toInt(), event.y.toInt())
             }
             true
         }
+        val s = intent.getIntExtra("noOfPlayers", 4).toString() + ""
+        info = findViewById<View>(R.id.info) as TextView
+        info!!.text = s
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         return super.onKeyUp(keyCode, event)
     }
 
+    fun complete(winner: Int) {
+        var i = Intent(this, Finish::class.java)
+        i.putExtra("Winner", winner)
+        startActivity(i)
+        finish()
+    }
+
     companion object {
         var info: TextView? = null
     }
+
 }
 
-private class MyCanvas(c: Context?, attrs: AttributeSet?) : SurfaceView(c, attrs) {
-    var surfaceHolder: SurfaceHolder
-    var time: Long = 0
-    var myPaint: Paint = Paint()
-    var dotsPerCol = 7
-    var totalNoOfDots = dotsPerCol * dotsPerCol
-    var dots: Array<Dot?>
-    var lines: Array<Line?>
-    var squares: Array<Square?>
-    var dotRadius = 0
-    var focusedDot = 0
-    var dotPrevColor = Color.GRAY
-    var strokeWidth = dotRadius / 2.toFloat()
+private class Game(con: Context?, attrs: AttributeSet?) : SurfaceView(con, attrs) {
     private lateinit var players: Array<Player?>
-    var totalPlayers = 0
-    var currentPlayer = 0
+    private var totalPlayers = 0
+    private var currentPlayer = 0
+
+    private var surfaceHolder: SurfaceHolder
+    private var dots: Array<Dot?>
+    private var lines: Array<Line?>
+    private var squares: Array<Square?>
+
+    private var time: Long = 0
+    private var paint: Paint = Paint()
+    var dotsPerCol = 7
+    private var totalNoOfDots = dotsPerCol * dotsPerCol
+    private var dotRadius = 0
+    private var focusedDot = 0
+    private var dotPrevColor = Color.GRAY
+    private var strokeWidth = dotRadius / 2.toFloat()
+
+    lateinit var playActivity: PlayActivity
+
     fun togglePlayer() {
         currentPlayer = (currentPlayer + 1) % totalPlayers
     }
@@ -83,20 +99,20 @@ private class MyCanvas(c: Context?, attrs: AttributeSet?) : SurfaceView(c, attrs
         val x = width
         val y = height
         val uY = (y - x) / 2
-        val Margin = width / (dotsPerCol + 2)
-        dotRadius = Margin / 4
-        strokeWidth = Margin / 6.toFloat()
-        var j = uY + Margin
+        val margin = width / (dotsPerCol + 2)
+        dotRadius = margin / 4
+        strokeWidth = margin / 6.toFloat()
+        var j = uY + margin
         var col = 0
         while (col < dotsPerCol) {
-            var i = 3 * Margin / 2
+            var i = 3 * margin / 2
             var row = 0
             while (row < dotsPerCol) {
                 dots[col * dotsPerCol + row] = Dot(i, j, col * dotsPerCol + row)
-                i += Margin
+                i += margin
                 row++
             }
-            j += Margin
+            j += margin
             col++
         }
         Draw(canvas)
@@ -134,7 +150,9 @@ private class MyCanvas(c: Context?, attrs: AttributeSet?) : SurfaceView(c, attrs
                 if (arr[0] == 2) squares[Square.counter + 1] = Square(dots[focusedDot]!!.x, dots[focusedDot]!!.y, arr[3], arr[4], players[currentPlayer]!!.color)
                 if (Square.counter + 1 == (dotsPerCol - 1) * (dotsPerCol - 1)) {
                     info += " Grid Complete"
-                    PlayActivity.info!!.text = "Player " + getHighestScorer() + " wins"
+                    playActivity.complete(getHighestScorer())
+
+
                 }
             }
             connect(focusedDot, nearest_d)
@@ -158,23 +176,24 @@ private class MyCanvas(c: Context?, attrs: AttributeSet?) : SurfaceView(c, attrs
     }
 
     fun Draw(c: Canvas) {
-        myPaint.isAntiAlias = true
-        myPaint.color = Color.WHITE
-        c.drawPaint(myPaint)
-        myPaint.style = Paint.Style.FILL
+        paint.isAntiAlias = true
+        paint.color = Color.WHITE
+        c.drawPaint(paint)
+        paint.style = Paint.Style.FILL
+
+
         for (i in 0..Square.counter) {
-            myPaint.color = squares[i]!!.color
-            Log.d("abz", "$i val of i for debugging")
-            c.drawRect(squares[i]!!.x1.toFloat(), squares[i]!!.y1.toFloat(), squares[i]!!.x2.toFloat(), squares[i]!!.y2.toFloat(), myPaint)
+            paint.color = squares[i]!!.color
+            c.drawRect(squares[i]!!.x1.toFloat(), squares[i]!!.y1.toFloat(), squares[i]!!.x2.toFloat(), squares[i]!!.y2.toFloat(), paint)
         }
         for (i in 0..Line.counter) {
-            myPaint.color = lines[i]!!.color
-            myPaint.strokeWidth = strokeWidth
-            c.drawLine(lines[i]!!.x1.toFloat(), lines[i]!!.y1.toFloat(), lines[i]!!.x2.toFloat(), lines[i]!!.y2.toFloat(), myPaint)
+            paint.color = Color.LTGRAY
+            paint.strokeWidth = strokeWidth
+            c.drawLine(lines[i]!!.x1.toFloat(), lines[i]!!.y1.toFloat(), lines[i]!!.x2.toFloat(), lines[i]!!.y2.toFloat(), paint)
         }
         for (curr_dot in 0 until totalNoOfDots) {
-            myPaint.color = dots[curr_dot]!!.color
-            c.drawCircle(dots[curr_dot]!!.x.toFloat(), dots[curr_dot]!!.y.toFloat(), dotRadius.toFloat(), myPaint)
+            paint.color = Color.LTGRAY
+            c.drawCircle(dots[curr_dot]!!.x.toFloat(), dots[curr_dot]!!.y.toFloat(), dotRadius.toFloat(), paint)
         }
     }
 
@@ -239,11 +258,11 @@ private class MyCanvas(c: Context?, attrs: AttributeSet?) : SurfaceView(c, attrs
         if (focusedDot == -1) return
         val c = surfaceHolder.lockCanvas(null)
         Draw(c)
-        myPaint.strokeWidth = strokeWidth
-        myPaint.color = players[currentPlayer]!!.color
-        c.drawLine(dots[focusedDot]!!.x.toFloat(), dots[focusedDot]!!.y.toFloat(), x.toFloat(), y.toFloat(), myPaint)
-        c.drawCircle(dots[focusedDot]!!.x.toFloat(), dots[focusedDot]!!.y.toFloat(), strokeWidth / 2, myPaint)
-        c.drawCircle(x.toFloat(), y.toFloat(), strokeWidth / 2, myPaint)
+        paint.strokeWidth = strokeWidth
+        paint.color = Color.LTGRAY
+        c.drawLine(dots[focusedDot]!!.x.toFloat(), dots[focusedDot]!!.y.toFloat(), x.toFloat(), y.toFloat(), paint)
+        c.drawCircle(dots[focusedDot]!!.x.toFloat(), dots[focusedDot]!!.y.toFloat(), strokeWidth / 2, paint)
+        c.drawCircle(x.toFloat(), y.toFloat(), strokeWidth / 2, paint)
         surfaceHolder.unlockCanvasAndPost(c)
         Log.d("abz", "Current frame rendering time in stretch is " + (System.currentTimeMillis() - time))
     }
@@ -262,7 +281,7 @@ private class MyCanvas(c: Context?, attrs: AttributeSet?) : SurfaceView(c, attrs
     }
 
     init {
-        myPaint.color = Color.GRAY
+        paint.color = Color.GRAY
         surfaceHolder = holder
         dots = arrayOfNulls(totalNoOfDots)
         lines = arrayOfNulls(2 * (dotsPerCol * (dotsPerCol - 1)))
@@ -281,7 +300,7 @@ private class MyCanvas(c: Context?, attrs: AttributeSet?) : SurfaceView(c, attrs
 }
 
 internal class Line(var x1: Int, var y1: Int, var x2: Int, var y2: Int, color: Int) {
-    var color = Color.GRAY
+    var color = Color.LTGRAY
 
     companion object {
         var counter = -1
@@ -306,9 +325,8 @@ internal class Square(var x1: Int, var y1: Int, var x2: Int, var y2: Int, color:
     }
 }
 
-internal class Dot(x: Int, y: Int, pos: Int) {
-    var x: Int
-    var y: Int
+
+internal class Dot(var x: Int, var y: Int, pos: Int) {
     protected var selfPos: Int
     var color: Int
     var counter = -1
