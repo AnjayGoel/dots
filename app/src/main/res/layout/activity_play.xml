@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:theme="@style/FullscreenTheme"
-    tools:context="com.anjay.dots.Play_Activity"
+    tools:context="com.anjay.dots.PlayActivity"
     android:weightSum="1"
     android:orientation="vertical"
     android:background="#e0e0e0">

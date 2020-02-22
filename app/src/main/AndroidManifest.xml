@@ -8,10 +8,10 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/FullscreenTheme">
-        <activity android:name=".Play_Activity">
+        <activity android:name=".PlayActivity">
         </activity>
         <activity
-            android:name=".welcome"
+            android:name=".Welcome"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="@string/title_activity_welcome"
             android:theme="@style/FullscreenTheme">

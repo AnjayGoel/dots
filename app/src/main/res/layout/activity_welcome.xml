@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:background="#ffffff"
     android:theme="@style/FullscreenTheme"
-    tools:context="com.anjay.dots.welcome"
+    tools:context="com.anjay.dots.Welcome"
     android:orientation="vertical"
     android:weightSum="1">
 
