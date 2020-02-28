@@ -27,7 +27,7 @@ class Welcome : FragmentActivity() {
     private fun launch() {
         val launch = Intent(this, PlayActivity::class.java)
         launch.putExtra("noOfPlayers", picker.value + 2)
-        launch.putExtra("gridSize", picker2.value + 2)
+        launch.putExtra("gridSize", picker2.value)
         startActivity(launch)
         finish()
     }
